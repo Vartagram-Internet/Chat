@@ -161,4 +161,11 @@ final actor RecordingPlayer: ObservableObject {
         progress = time.seconds / itemDuration.seconds
         secondsLeft = (itemDuration - time).seconds.rounded()
     }
+    
+    static func getDuration(of url: URL) async throws -> Double {
+        let asset = AVURLAsset(url: url)
+        let duration = try await asset.load(.duration)
+        return CMTimeGetSeconds(duration)
+    }
+
 }

@@ -374,6 +374,8 @@ struct InputView: View {
         } label: {
             theme.images.inputView.arrowSend
                 .viewSize(48)
+                .foregroundStyle(theme.colors.mainTint)
+               
                 .circleBackground(theme.colors.sendButtonBackground)
         }
     }

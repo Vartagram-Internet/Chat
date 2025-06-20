@@ -197,13 +197,13 @@ private extension InputViewModel {
     }
   
     func subscribePicker() {
-        $showPicker
-            .sink { [weak self] value in
-                if !value {
-                    self?.attachments.medias = []
-                }
-            }
-            .store(in: &subscriptions)
+//        $showPicker
+//            .sink { [weak self] value in
+//                if !value {
+//                    self?.attachments.medias = []
+//                }
+//            }
+//            .store(in: &subscriptions)
     }
 
     func subscribeRecordPlayer() {

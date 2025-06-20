@@ -27,7 +27,7 @@ struct MessageTextView: View {
     var styledText: AttributedString {
         var result = text.styled(using: messageStyler)
         result.foregroundColor = theme.colors.messageText(userType)
-
+        
         for (link, range) in result.runs[\.link] {
             if link != nil {
                 result[range].underlineStyle = .single
@@ -45,7 +45,8 @@ struct MessageTextView: View {
         if !styledText.characters.isEmpty {
             VStack(alignment: .leading) {
                 Text(styledText)
-                    .sizeGetter($textSize)
+                    //.sizeGetter($textSize)
+                    .font(.body)
 
                 // We use .enumerated(), and \.offset as the id, so that a message with duplicate links will show a preview for each.
                 if !urlsToPreview.isEmpty {

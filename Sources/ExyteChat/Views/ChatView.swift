@@ -124,7 +124,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     var showMessageTimeView = true
     var messageLinkPreviewLimit = 8
     var messageFont = UIFontMetrics.default.scaledFont(for: UIFont.systemFont(ofSize: 15))
-    var availableInputs: [AvailableInputType] = [.text, .audio, .giphy, .media]
+    var availableInputs: [AvailableInputType] = [.text, //.audio,
+        .giphy, .media]
     var recorderSettings: RecorderSettings = RecorderSettings()
     var listSwipeActions: ListSwipeActions = ListSwipeActions()
     
@@ -220,17 +221,17 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                 }
             }
             .fullScreenCover(isPresented: $inputViewModel.showPicker) {
-                AttachmentsEditor(
-                    inputViewModel: inputViewModel,
-                    inputViewBuilder: inputViewBuilder,
-                    chatTitle: chatTitle,
-                    messageStyler: messageStyler,
-                    orientationHandler: orientationHandler,
-                    mediaPickerSelectionParameters: mediaPickerSelectionParameters,
-                    availableInputs: availableInputs,
-                    localization: localization
-                )
-                .environmentObject(globalFocusState)
+                AttachmentsEditorNew(
+                        inputViewModel: inputViewModel,
+                        inputViewBuilder: inputViewBuilder,
+                        chatTitle: chatTitle,
+                        messageStyler: messageStyler,
+                        orientationHandler: orientationHandler,
+                        mediaPickerSelectionParameters: mediaPickerSelectionParameters,
+                        availableInputs: availableInputs,
+                        localization: localization
+                    )
+                    .environmentObject(globalFocusState)
             }
         
             .onChange(of: inputViewModel.showPicker) { _ , newValue in
@@ -246,7 +247,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     }
     
     var mainView: some View {
-        VStack {
+        VStack (spacing: 0) {
             if showNetworkConnectionProblem, !networkMonitor.isConnected {
                 waitingForNetwork
             }

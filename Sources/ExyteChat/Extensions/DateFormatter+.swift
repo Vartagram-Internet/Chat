@@ -4,29 +4,57 @@
 
 import Foundation
 
+// extension DateFormatter {
+//     static let timeFormatter = {
+//         let formatter = DateFormatter()
+
+//         formatter.dateStyle = .none
+//         formatter.timeStyle = .short
+
+//         return formatter
+//     }()
+
+//     static let relativeDateFormatter = {
+//         let relativeDateFormatter = DateFormatter()
+//         relativeDateFormatter.timeStyle = .none
+//         relativeDateFormatter.dateStyle = .full
+//         relativeDateFormatter.doesRelativeDateFormatting = true
+
+//         return relativeDateFormatter
+//     }()
+
+//     static func timeString(_ seconds: Int) -> String {
+//         let hour = Int(seconds) / 3600
+//         let minute = Int(seconds) / 60 % 60
+//         let second = Int(seconds) % 60
+
+//         if hour > 0 {
+//             return String(format: "%02i:%02i:%02i", hour, minute, second)
+//         }
+//         return String(format: "%02i:%02i", minute, second)
+//     }
+// }
+
+
 extension DateFormatter {
-    static let timeFormatter = {
+    static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
-
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-
+        formatter.dateFormat = "HH:mm"  // 24-hour format, no AM/PM
         return formatter
     }()
 
-    static let relativeDateFormatter = {
+    static let relativeDateFormatter: DateFormatter = {
         let relativeDateFormatter = DateFormatter()
         relativeDateFormatter.timeStyle = .none
         relativeDateFormatter.dateStyle = .full
         relativeDateFormatter.doesRelativeDateFormatting = true
-
         return relativeDateFormatter
     }()
 
     static func timeString(_ seconds: Int) -> String {
-        let hour = Int(seconds) / 3600
-        let minute = Int(seconds) / 60 % 60
-        let second = Int(seconds) % 60
+        let hour = seconds / 3600
+        let minute = (seconds / 60) % 60
+        let second = seconds % 60
 
         if hour > 0 {
             return String(format: "%02i:%02i:%02i", hour, minute, second)

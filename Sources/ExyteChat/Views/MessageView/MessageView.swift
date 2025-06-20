@@ -325,7 +325,7 @@ extension View {
 
     @ViewBuilder
     func bubbleBackground(_ message: Message, theme: ChatTheme, isReply: Bool = false) -> some View {
-        let radius: CGFloat = !message.attachments.isEmpty ? 12 : 20
+        let radius: CGFloat = !message.attachments.isEmpty ? 12 : 8
         let additionalMediaInset: CGFloat = message.attachments.count > 1 ? 2 : 0
         self
             .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
