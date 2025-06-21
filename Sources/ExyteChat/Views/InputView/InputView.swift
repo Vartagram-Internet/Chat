@@ -167,7 +167,8 @@ struct InputView: View {
             case .hasRecording, .playingRecording, .pausedRecording:
                 recordWaveform
             case .isRecordingHold:
-                swipeToCancel
+                recordDurationInProcess
+                
             case .isRecordingTap:
                 recordingInProgress
             default:
@@ -192,7 +193,7 @@ struct InputView: View {
                     cameraButton
                 }
             case .isRecordingHold, .isRecordingTap:
-                recordDurationInProcess
+                stopRecordButton
             case .hasRecording:
                 recordDuration
             case .playingRecording, .pausedRecording:
@@ -252,18 +253,7 @@ struct InputView: View {
                     }
                 }
                 .compositingGroup()
-                .overlay(alignment: .top) {
-                    Group {
-                        if state == .isRecordingTap {
-                            stopRecordButton
-                        } else if state == .isRecordingHold {
-                            lockRecordButton
-                        }
-                    }
-                    .sizeGetter($overlaySize)
-                    // hardcode 28 for now because sizeGetter returns 0 somehow
-                    .offset(y: (state == .isRecordingTap ? -28 : -overlaySize.height) - 24)
-                }
+               
             }
             .viewSize(48)
         }
@@ -402,13 +392,17 @@ struct InputView: View {
         Button {
             onAction(.stopRecordAudio)
         } label: {
-            theme.images.recordAudio.stopRecord
-                .viewSize(28)
-                .background(
-                    Capsule()
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.4), radius: 1)
-                )
+            VStack{
+                theme.images.recordAudio.stopRecord
+                    .viewSize(28)
+                    .background(
+                        Capsule()
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.4), radius: 1)
+                    )
+            }.padding(.horizontal, 16)
+            
+
         }
     }
     
@@ -462,15 +456,18 @@ struct InputView: View {
     
     var recordDurationInProcess: some View {
         HStack {
+            Spacer()
             Circle()
                 .foregroundColor(theme.colors.recordDot)
                 .viewSize(6)
             recordDuration
+            Spacer()
         }
     }
-    
+  
     var recordDuration: some View {
-        Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
+        Text(String(Int(viewModel.attachments.recording?.duration ?? 0)))
+        //Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
             .foregroundColor(theme.colors.mainText)
             .opacity(0.6)
             .font(.caption2)
@@ -479,7 +476,8 @@ struct InputView: View {
     }
     
     var recordDurationLeft: some View {
-        Text(DateFormatter.timeString(Int(recordingPlayer.secondsLeft)))
+        Text(String(Int(recordingPlayer.secondsLeft)))
+       // Text(DateFormatter.timeString(Int(recordingPlayer.secondsLeft)))
             .foregroundColor(theme.colors.mainText)
             .opacity(0.6)
             .font(.caption2)

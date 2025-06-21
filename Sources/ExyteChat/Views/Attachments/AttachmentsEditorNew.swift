@@ -52,19 +52,23 @@ struct AttachmentsEditorNew<InputViewContent: View>: View {
                 Color.black.ignoresSafeArea()
             }
             if(showCamera){
-                CameraPicker { image in
-              
-                    if let image = image {
+                CameraPicker { picked in
+                    switch picked {
+                    case .image(let image):
                         let mediaModel = CameraImageMedia(image: image)
                         let media = Media(source: mediaModel)
-
                         inputViewModel.attachments = InputViewAttachments(medias: [media])
-                      
 
+                    case .video(let url):
+                        let mediaModel = CameraVideoMedia(videoURL: url)
+                        let media = Media(source: mediaModel)
+                        inputViewModel.attachments = InputViewAttachments(medias: [media])
+
+                    case .none:
+                        break
                     }
-
-
                 }
+
                 .onChange(of: inputViewModel.attachments.medias) { newValue in
                     if !newValue.isEmpty {
                       
@@ -125,7 +129,7 @@ struct AttachmentsEditorNew<InputViewContent: View>: View {
 
 struct CameraPicker: UIViewControllerRepresentable {
     @Environment(\.presentationMode) var presentationMode
-    var didFinishPicking: (UIImage?) -> Void
+    var didFinishPicking: (PickedMedia?) -> Void
 
     func makeCoordinator() -> Coordinator {
         return Coordinator(self)
@@ -157,12 +161,9 @@ struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let mediaType = info[.mediaType] as? String {
                 if mediaType == "public.image", let image = info[.originalImage] as? UIImage {
-                    parent.didFinishPicking(image)
+                    parent.didFinishPicking(.image(image))
                 } else if mediaType == "public.movie", let url = info[.mediaURL] as? URL {
-                    // 👇 You can update your callback to pass the video URL or handle it separately
-                 
-                    // For now, just call didFinishPicking with nil or create a new callback
-                    parent.didFinishPicking(nil)
+                    parent.didFinishPicking(.video(url))
                 }
             }
 
@@ -170,10 +171,12 @@ struct CameraPicker: UIViewControllerRepresentable {
         }
 
 
+
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.didFinishPicking(nil)
             parent.presentationMode.wrappedValue.dismiss()
         }
+
     }
 }
 
@@ -266,6 +269,39 @@ struct NativePhotoPicker: UIViewControllerRepresentable {
     }
 }
 
+final class CameraVideoMedia: MediaModelProtocol {
+    let videoURL: URL
+
+    init(videoURL: URL) {
+        self.videoURL = videoURL
+    }
+
+    var mediaType: MediaType? {
+        .video
+    }
+
+    var duration: CGFloat? {
+        nil // You can fetch AVAsset duration if needed
+    }
+
+    func getURL() async -> URL? {
+        videoURL
+    }
+
+    func getThumbnailURL() async -> URL? {
+        nil
+    }
+
+    func getData() async throws -> Data? {
+        try? Data(contentsOf: videoURL)
+    }
+
+    func getThumbnailData() async -> Data? {
+        // Optional: generate thumbnail image from video
+        return nil
+    }
+}
+
 
  
 
@@ -331,4 +367,10 @@ struct CameraShutterArea: View {
         }
         .frame(height: 150) // mimic camera bottom panel height
     }
+}
+
+
+enum PickedMedia {
+    case image(UIImage)
+    case video(URL)
 }

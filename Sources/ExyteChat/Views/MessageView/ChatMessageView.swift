@@ -25,7 +25,7 @@ struct ChatMessageView<MessageContent: View>: View {
     let showMessageTimeView: Bool
     let messageLinkPreviewLimit: Int
     let messageFont: UIFont
-
+    let isLastItem: Bool
     var body: some View {
         Group {
             if let messageBuilder = messageBuilder {
@@ -44,6 +44,7 @@ struct ChatMessageView<MessageContent: View>: View {
                     message: row.message,
                     positionInUserGroup: row.positionInUserGroup,
                     positionInMessagesSection: row.positionInMessagesSection,
+                    isLastMessageRow: isLastItem,
                     chatType: chatType,
                     avatarSize: avatarSize,
                     tapAvatarClosure: tapAvatarClosure,

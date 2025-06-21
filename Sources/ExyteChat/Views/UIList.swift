@@ -572,7 +572,8 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
                     avatarSize: avatarSize, tapAvatarClosure: tapAvatarClosure,
                     messageStyler: messageStyler, shouldShowLinkPreview: shouldShowLinkPreview,
                     isDisplayingMessageMenu: false, showMessageTimeView: showMessageTimeView,
-                    messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont
+                    messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont,
+                    isLastItem:indexPath.row == 0 && indexPath.section == 0
                 )
                 .transition(.scale)
                 .background(MessageMenuPreferenceViewSetter(id: row.id))

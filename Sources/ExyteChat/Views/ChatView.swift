@@ -124,8 +124,9 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     var showMessageTimeView = true
     var messageLinkPreviewLimit = 8
     var messageFont = UIFontMetrics.default.scaledFont(for: UIFont.systemFont(ofSize: 15))
-    var availableInputs: [AvailableInputType] = [.text, //.audio,
-        .giphy, .media]
+    var availableInputs: [AvailableInputType] = [.text, .audio,
+        .giphy,
+                                                 .media]
     var recorderSettings: RecorderSettings = RecorderSettings()
     var listSwipeActions: ListSwipeActions = ListSwipeActions()
     
@@ -434,7 +435,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                 avatarSize: avatarSize, tapAvatarClosure: nil, messageStyler: messageStyler,
                 shouldShowLinkPreview: shouldShowLinkPreview,
                 isDisplayingMessageMenu: true, showMessageTimeView: showMessageTimeView,
-                messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont
+                messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont, isLastItem: false
             )
             .onTapGesture {
                 hideMessageMenu()
