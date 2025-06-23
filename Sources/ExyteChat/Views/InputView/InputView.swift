@@ -104,7 +104,7 @@ struct InputView: View {
     @State private var dragStart: Date?
     @State private var tapDelayTimer: Timer?
     @State private var cancelGesture = false
-    private let tapDelay = 0.2
+    private let tapDelay = 0.0
     
     var body: some View {
         VStack {
@@ -164,8 +164,12 @@ struct InputView: View {
     var middleView: some View {
         Group {
             switch state {
-            case .hasRecording, .playingRecording, .pausedRecording:
-                recordWaveform
+            case .hasRecording, .pausedRecording:
+                recordDuration
+                
+            case .playingRecording:
+                recordDurationLeft
+       
             case .isRecordingHold:
                 recordDurationInProcess
                 
@@ -195,9 +199,11 @@ struct InputView: View {
             case .isRecordingHold, .isRecordingTap:
                 stopRecordButton
             case .hasRecording:
-                recordDuration
+               // recordDuration
+                recordWaveform
             case .playingRecording, .pausedRecording:
-                recordDurationLeft
+                //recordDurationLeft
+                recordWaveform
             default:
                 Color.clear.frame(width: 8, height: 1)
             }
@@ -373,6 +379,7 @@ struct InputView: View {
     var recordButton: some View {
         theme.images.inputView.microphone
             .viewSize(48)
+            .foregroundStyle(theme.colors.mainTint)
             .circleBackground(theme.colors.sendButtonBackground)
             .frameGetter($recordButtonFrame)
     }
@@ -449,7 +456,7 @@ struct InputView: View {
             Spacer()
             Text(localization.recordingText)
                 .font(.footnote)
-                .foregroundColor(theme.colors.mainText)
+                .foregroundColor(theme.colors.mainCaptionText)
             Spacer()
         }
     }
@@ -466,31 +473,36 @@ struct InputView: View {
     }
   
     var recordDuration: some View {
-        Text(String(Int(viewModel.attachments.recording?.duration ?? 0)))
-        //Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
-            .foregroundColor(theme.colors.mainText)
-            .opacity(0.6)
-            .font(.caption2)
-            .monospacedDigit()
-            .padding(.trailing, 12)
+        HStack{
+            Spacer()
+            Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
+                .foregroundColor(theme.colors.mainCaptionText)
+                .opacity(0.75)
+                .font(.footnote)
+                .monospacedDigit()
+                .padding(.trailing, 12)
+            Spacer()
+        }
+      
     }
     
     var recordDurationLeft: some View {
-        Text(String(Int(recordingPlayer.secondsLeft)))
-       // Text(DateFormatter.timeString(Int(recordingPlayer.secondsLeft)))
-            .foregroundColor(theme.colors.mainText)
-            .opacity(0.6)
-            .font(.caption2)
+        HStack{
+            Spacer()
+        Text(DateFormatter.timeString(Int(recordingPlayer.secondsLeft)))
+            .foregroundColor(theme.colors.mainCaptionText)
+            .opacity(0.75)
+            .font(.footnote)
             .monospacedDigit()
             .padding(.trailing, 12)
+            Spacer()
+        }
     }
     
     var playRecordButton: some View {
-        Button {
-            onAction(.playRecord)
-        } label: {
-            theme.images.recordAudio.playRecord
-        }
+        Button(action:{viewModel.cutomPlayAction()}){
+                             theme.images.recordAudio.playRecord
+             }
     }
     
     var pauseRecordButton: some View {
@@ -513,12 +525,7 @@ struct InputView: View {
                     }
                 }
                 .frame(width: 20)
-                
-                RecordWaveformPlaying(samples: samples, progress: recordingPlayer.progress, color: theme.colors.mainText, addExtraDots: true) { progress in
-                    Task {
-                        await recordingPlayer.seek(with: viewModel.attachments.recording!, to: progress)
-                    }
-                }
+ 
             }
             .padding(.horizontal, 8)
         }

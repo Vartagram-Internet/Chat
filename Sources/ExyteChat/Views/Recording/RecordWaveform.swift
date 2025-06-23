@@ -63,7 +63,7 @@ struct RecordWaveformWithButtons: View {
                         await recordPlayer.seek(with: recording, to: progress)
                     }
                 }
-                Text(DateFormatter.timeString(duration))
+                Text(duration == 0 ? "0.5 sec" : DateFormatter.timeString(duration))
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundColor(colorWaveform)

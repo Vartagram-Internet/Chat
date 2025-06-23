@@ -46,9 +46,25 @@ public struct AttachmentCell: View {
         )
     }
 
+//    var content: some View {
+//        AsyncImageView(url: attachment.thumbnail, size: size)
+//    }
+    
+    @ViewBuilder
     var content: some View {
-        AsyncImageView(url: attachment.thumbnail, size: size)
+        if attachment.type == .image {
+            AsyncImageView(url: attachment.thumbnail, size: size)
+        } else if attachment.type == .video {
+            VideoThumbnailView(url: attachment.thumbnail, size: size)
+        } else {
+            // Fallback UI for unknown types
+            Rectangle()
+                .foregroundColor(.gray)
+                .frame(width: size.width, height: size.height)
+        }
     }
+
+    
 }
 
 struct AsyncImageView: View {
@@ -75,3 +91,49 @@ struct AsyncImageView: View {
         }
     }
 }
+
+
+import AVFoundation
+
+struct VideoThumbnailView: View {
+    let url: URL
+    let size: CGSize
+
+    @State private var thumbnailImage: UIImage?
+
+    var body: some View {
+        Group {
+            if let image = thumbnailImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .foregroundColor(.gray)
+                    .frame(width: size.width, height: size.height)
+                    .onAppear {
+                        generateThumbnail()
+                    }
+            }
+        }
+    }
+
+    private func generateThumbnail() {
+        Task {
+            let asset = AVAsset(url: url)
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+
+            do {
+                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                thumbnailImage = UIImage(cgImage: cgImage)
+            } catch {
+                print("Failed to generate thumbnail: \(error)")
+            }
+        }
+    }
+}
+
+

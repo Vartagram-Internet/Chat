@@ -408,11 +408,11 @@ public struct ChatTheme {
 
             self.inputView = InputView(
                 add: add ?? Image("add", bundle: .current),
-                arrowSend: arrowSend ?? Image(systemName: "arrow.up"),
+                arrowSend: arrowSend ?? Image(systemName: "arrow.up") ,
                 sticker: sticker ?? Image("sticker", bundle: .current),
                 attach: attach ?? Image("attach", bundle: .current),
                 attachCamera: attachCamera ?? Image("attachCamera", bundle: .current),
-                microphone: microphone ?? Image("microphone", bundle: .current)
+                microphone: microphone ?? Image(systemName: "microphone.fill")
             )
 
             self.fullscreenMedia = FullscreenMedia(

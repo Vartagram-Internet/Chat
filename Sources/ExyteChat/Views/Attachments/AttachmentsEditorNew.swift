@@ -78,13 +78,25 @@ struct AttachmentsEditorNew<InputViewContent: View>: View {
 
             }
             else{
-                NativePhotoPicker { images in
-                     let medias = images.map { image in
-                         Media(source: CameraImageMedia(image: image)) // ✅ reuse your CameraImageMedia
+                NativeMediaPicker { images, videos in
+                         // 📷 Handle images
+                         if !images.isEmpty {
+                             let medias = images.map { image in
+                                 Media(source: CameraImageMedia(image: image))
+                             }
+                             inputViewModel.attachments.medias = medias
+                         }
+
+                         // 🎞️ Handle videos
+                         if let firstVideoURL = videos.first {
+                             let mediaModel = CameraVideoMedia(videoURL: firstVideoURL)
+                             let videoMedia = Media(source: mediaModel)
+                             inputViewModel.attachments = InputViewAttachments(medias: [videoMedia])
+                         }
+
+                         // 🚀 Send after attaching
+                         inputViewModel.send()
                      }
-                     inputViewModel.attachments.medias = medias
-                     inputViewModel.send()
-                 }
             }
           
 
@@ -217,8 +229,9 @@ final class CameraImageMedia: MediaModelProtocol {
 }
 
  
-struct NativePhotoPicker: UIViewControllerRepresentable {
-    var onComplete: ([UIImage]) -> Void
+
+struct NativeMediaPicker: UIViewControllerRepresentable {
+    var onComplete: (_ images: [UIImage], _ videoURLs: [URL]) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onComplete: onComplete)
@@ -226,8 +239,8 @@ struct NativePhotoPicker: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
-        config.selectionLimit = 1 // or 1 for single image
-        config.filter = .images // or .any for images + videos
+        config.selectionLimit = 0 // 0 = unlimited selection
+        config.filter = PHPickerFilter.any(of: [.images, .videos])
 
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
@@ -237,20 +250,23 @@ struct NativePhotoPicker: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
 
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onComplete: ([UIImage]) -> Void
+        let onComplete: ([UIImage], [URL]) -> Void
 
-        init(onComplete: @escaping ([UIImage]) -> Void) {
+        init(onComplete: @escaping ([UIImage], [URL]) -> Void) {
             self.onComplete = onComplete
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
 
-            let itemProviders = results.map(\.itemProvider)
             var images: [UIImage] = []
+            var videoURLs: [URL] = []
             let group = DispatchGroup()
 
-            for provider in itemProviders {
+            for result in results {
+                let provider = result.itemProvider
+
+                // Load images
                 if provider.canLoadObject(ofClass: UIImage.self) {
                     group.enter()
                     provider.loadObject(ofClass: UIImage.self) { object, _ in
@@ -260,10 +276,28 @@ struct NativePhotoPicker: UIViewControllerRepresentable {
                         group.leave()
                     }
                 }
+
+                // Load videos
+                if provider.hasItemConformingToTypeIdentifier("public.movie") {
+                    group.enter()
+                    provider.loadFileRepresentation(forTypeIdentifier: "public.movie") { url, _ in
+                        if let url = url {
+                            // Copy video to temp directory
+                            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mov")
+                            do {
+                                try FileManager.default.copyItem(at: url, to: tempURL)
+                                videoURLs.append(tempURL)
+                            } catch {
+                                print("Failed to copy video: \(error)")
+                            }
+                        }
+                        group.leave()
+                    }
+                }
             }
 
             group.notify(queue: .main) {
-                self.onComplete(images)
+                self.onComplete(images, videoURLs)
             }
         }
     }

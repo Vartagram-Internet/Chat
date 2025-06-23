@@ -13,13 +13,13 @@ final actor Recorder {
     // duration and waveform samples
     typealias ProgressHandler = @Sendable (Double, [CGFloat]) -> Void
 
-    private let audioSession = AVAudioSession()
+    private let audioSession = AVAudioSession.sharedInstance()
     private var audioRecorder: AVAudioRecorder?
     private var audioTimer: Timer?
 
     private var soundSamples: [CGFloat] = []
     private var recorderSettings = RecorderSettings()
-
+    private var audioTimerTask: Task<Void, Never>?
     var isAllowedToRecordAudio: Bool {
         AVAudioApplication.shared.recordPermission == .granted
     }
@@ -45,17 +45,21 @@ final actor Recorder {
     }
     
     private func startRecordingInternal(_ durationProgressHandler: @escaping ProgressHandler) -> URL? {
-        let settings: [String : Any] = [
+        var settings: [String: Any] = [
             AVFormatIDKey: Int(recorderSettings.audioFormatID),
             AVSampleRateKey: recorderSettings.sampleRate,
             AVNumberOfChannelsKey: recorderSettings.numberOfChannels,
             AVEncoderBitRateKey: recorderSettings.encoderBitRateKey,
-            AVLinearPCMBitDepthKey: recorderSettings.linearPCMBitDepth,
-            AVLinearPCMIsFloatKey: recorderSettings.linearPCMIsFloatKey,
-            AVLinearPCMIsBigEndianKey: recorderSettings.linearPCMIsBigEndianKey,
-            AVLinearPCMIsNonInterleaved: recorderSettings.linearPCMIsNonInterleaved,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
+
+        if recorderSettings.audioFormatID == kAudioFormatLinearPCM {
+            settings[AVLinearPCMBitDepthKey] = recorderSettings.linearPCMBitDepth
+            settings[AVLinearPCMIsFloatKey] = recorderSettings.linearPCMIsFloatKey
+            settings[AVLinearPCMIsBigEndianKey] = recorderSettings.linearPCMIsBigEndianKey
+            settings[AVLinearPCMIsNonInterleaved] = recorderSettings.linearPCMIsNonInterleaved
+        }
+
 
         soundSamples = []
         guard let fileExt = fileExtension(for: recorderSettings.audioFormatID) else{
@@ -71,11 +75,7 @@ final actor Recorder {
             audioRecorder?.record()
             durationProgressHandler(0.0, [])
 
-            audioTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-                Task {
-                    await self?.onTimer(durationProgressHandler)
-                }
-            }
+            startTimerLoop(durationProgressHandler: durationProgressHandler)
 
             return recordingUrl
         } catch {
@@ -99,14 +99,18 @@ final actor Recorder {
     func stopRecording() {
         audioRecorder?.stop()
         audioRecorder = nil
-        audioTimer?.invalidate()
-        audioTimer = nil
+
+        audioTimerTask?.cancel()
+        audioTimerTask = nil
+        
+        soundSamples = []
     }
+
 
     private func fileExtension(for formatID: AudioFormatID) -> String? {
         switch formatID {
         case kAudioFormatMPEG4AAC:
-            return ".aac"
+           return ".m4a"
         case kAudioFormatLinearPCM:
             return ".wav"
         case kAudioFormatMPEGLayer3:
@@ -137,6 +141,19 @@ final actor Recorder {
             return nil
         }
     }
+    
+    func startTimerLoop(durationProgressHandler: @escaping ProgressHandler) {
+        audioTimerTask?.cancel() // cancel any previous one
+        audioTimerTask = Task {
+            while self.audioRecorder?.isRecording == true && !Task.isCancelled {
+                await self.onTimer(durationProgressHandler)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+        }
+    }
+
+
+
 }
 
 public struct RecorderSettings : Codable,Hashable {
@@ -153,7 +170,7 @@ public struct RecorderSettings : Codable,Hashable {
     public init(audioFormatID: AudioFormatID = kAudioFormatMPEG4AAC,
                 sampleRate: CGFloat = 12000,
                 numberOfChannels: Int = 1,
-                encoderBitRateKey: Int = 128,
+                encoderBitRateKey: Int = 128000,
                 linearPCMBitDepth: Int = 16,
                 linearPCMIsFloatKey: Bool = false,
                 linearPCMIsBigEndianKey: Bool = false,
