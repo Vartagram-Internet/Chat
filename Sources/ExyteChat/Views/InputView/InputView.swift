@@ -85,6 +85,8 @@ struct InputView: View {
     var recorderSettings: RecorderSettings = RecorderSettings()
     var localization: ChatLocalization
     
+    var onTypingChanged: ((Bool) -> Void)? = nil
+    var isGhostMode: Bool = false
     @StateObject var recordingPlayer = RecordingPlayer()
     
     private var onAction: (InputViewAction) -> Void {
@@ -181,7 +183,9 @@ struct InputView: View {
                     inputFieldId: inputFieldId,
                     style: style,
                     availableInputs: availableInputs,
-                    localization: localization
+                    localization: localization,
+                    onTypingChanged:onTypingChanged,
+                    isGhostMode:isGhostMode
                 )
             }
         }
@@ -500,7 +504,7 @@ struct InputView: View {
     }
     
     var playRecordButton: some View {
-        Button(action:{viewModel.cutomPlayAction()}){
+        Button(action:{}){
                              theme.images.recordAudio.playRecord
              }
     }

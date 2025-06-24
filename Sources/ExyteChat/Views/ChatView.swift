@@ -77,6 +77,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     // MARK: - Parameters
     
     let type: ChatType
+    let isGhostMode:Bool
+    let didChangeChatState: ((Bool) -> Void)?
     let sections: [MessagesSection]
     let ids: [String]
     let didSendMessage: (DraftMessage) -> Void
@@ -149,17 +151,23 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     @State private var giphyConfigured = false
     @State private var selectedMedia: GPHMedia? = nil
     
-    public init(messages: [Message],
-                chatType: ChatType = .conversation,
-                replyMode: ReplyMode = .quote,
-                didSendMessage: @escaping (DraftMessage) -> Void,
-                reactionDelegate: ReactionDelegate? = nil,
-                messageBuilder: @escaping MessageBuilderClosure,
-                inputViewBuilder: @escaping InputViewBuilderClosure,
-                messageMenuAction: MessageMenuActionClosure?,
-                localization: ChatLocalization) {
+    public init(
+        messages: [Message],
+        chatType: ChatType = .conversation,
+        replyMode: ReplyMode = .quote,
+        isGhostMode: Bool = false,
+        didChangeChatState: ((Bool) -> Void)? = nil,
+        didSendMessage: @escaping (DraftMessage) -> Void,
+        reactionDelegate: ReactionDelegate? = nil,
+        messageBuilder: MessageBuilderClosure? = nil,
+        inputViewBuilder: InputViewBuilderClosure? = nil,
+        messageMenuAction: MessageMenuActionClosure? = nil,
+        localization: ChatLocalization
+    ) {
         self.type = chatType
+        self.isGhostMode = isGhostMode
         self.didSendMessage = didSendMessage
+        self.didChangeChatState = didChangeChatState
         self.reactionDelegate = reactionDelegate
         self.sections = ChatView.mapMessages(messages, chatType: chatType, replyMode: replyMode)
         self.ids = messages.map { $0.id }
@@ -168,6 +176,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
         self.messageMenuAction = messageMenuAction
         self.localization = localization
     }
+
     
     public var body: some View {
         mainView
@@ -400,7 +409,9 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                     availableInputs: availableInputs,
                     messageStyler: messageStyler,
                     recorderSettings: recorderSettings,
-                    localization: localization
+                    localization: localization,
+                    onTypingChanged: didChangeChatState,
+                    isGhostMode:isGhostMode
                 )
             }
         }
@@ -540,7 +551,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
             recentToggleText: String(localized: "Recents"),
             waitingForNetwork: String(localized: "Waiting for network"),
             recordingText: String(localized: "Recording..."),
-            replyToText: String(localized: "Reply to")
+            replyToText: String(localized: "Reply to"),
+            inputGhostPlaceholder: String(localized: "Chat as Ghost...")
         )
     }
 }
