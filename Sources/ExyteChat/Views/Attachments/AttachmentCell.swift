@@ -53,11 +53,28 @@ public struct AttachmentCell: View {
     @ViewBuilder
     var content: some View {
         if attachment.type == .image {
-            AsyncImageView(url: attachment.thumbnail, size: size)
+            AsyncImage(url: attachment.thumbnail) { phase in
+                switch phase {
+                case .empty:
+                    // Placeholder while loading
+                    MediaPlaceholderView(size: size)
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size.width, height: size.height)
+                        .clipped()
+                case .failure(_):
+                    // Fallback image on failure
+                    MediaPlaceholderView(size: size)
+                        
+                @unknown default:
+                    EmptyView()
+                }
+            }
         } else if attachment.type == .video {
             VideoThumbnailView(url: attachment.thumbnail, size: size)
         } else {
-            // Fallback UI for unknown types
             Rectangle()
                 .foregroundColor(.gray)
                 .frame(width: size.width, height: size.height)
@@ -137,3 +154,27 @@ struct VideoThumbnailView: View {
 }
 
 
+struct MediaPlaceholderView: View {
+    var size: CGSize
+
+    var body: some View {
+        ZStack {
+            // Background gradient or blur-style color
+            LinearGradient(
+                gradient: Gradient(colors: [.gray.opacity(0.3), .gray.opacity(0.6)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: size.width, height: size.height)
+            .cornerRadius(12)
+            .clipped()
+
+            // Placeholder image/icon (centered)
+            Image(systemName: "photo") // Use your asset or system icon
+                .resizable()
+                .scaledToFit()
+                .frame(width: size.width * 0.3, height: size.height * 0.3)
+                .foregroundColor(.white.opacity(0.6))
+        }
+    }
+}

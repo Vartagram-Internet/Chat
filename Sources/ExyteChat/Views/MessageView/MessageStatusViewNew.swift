@@ -8,13 +8,16 @@ import SwiftUI
 
 
 struct StatusText: View {
+    
     var text: String
+    var color: Color?
+    
     var body: some View {
         VStack(alignment: .trailing){
             
             Text(text)
                 .font(.caption2)
-                .foregroundColor(Color.gray)
+                .foregroundColor((color != nil) ? color : Color.gray)
         }
         .frame(width: 100,height: 20)
             .padding(.trailing,4)
@@ -33,11 +36,11 @@ struct MessageStatusViewNew: View {
         Group {
             switch status {
             case .sending:
-                StatusText(text:"...")
+                StatusText(text:"...",color: theme.colors.mainText)
             case .sent:
-               StatusText(text:"Sent")
+               StatusText(text:"Sent",color: theme.colors.mainText)
             case .read:
-                StatusText(text:"Seen")
+                StatusText(text:"Seen",color: theme.colors.mainText)
             case .error:
                 Button {
                     onRetry()

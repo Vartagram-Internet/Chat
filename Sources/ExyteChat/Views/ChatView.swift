@@ -127,7 +127,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
     var messageLinkPreviewLimit = 8
     var messageFont = UIFontMetrics.default.scaledFont(for: UIFont.systemFont(ofSize: 15))
     var availableInputs: [AvailableInputType] = [.text, .audio,
-        .giphy,
+//        .giphy,
                                                  .media]
     var recorderSettings: RecorderSettings = RecorderSettings()
     var listSwipeActions: ListSwipeActions = ListSwipeActions()
