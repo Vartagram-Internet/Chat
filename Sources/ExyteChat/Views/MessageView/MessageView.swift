@@ -133,7 +133,7 @@ struct MessageView: View {
         .padding(.top, topPadding)
         .padding(.bottom, bottomPadding)
         .padding(.trailing, message.user.isCurrentUser ? MessageView.horizontalNoAvatarPadding : 0)
-        .padding(.leading, message.user.isCurrentUser ? 0: 4)
+        .padding(.leading, message.user.isCurrentUser ? 0: 6)
         .padding(
             message.user.isCurrentUser ? .leading : .trailing, MessageView.horizontalBubblePadding
         )

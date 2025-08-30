@@ -124,7 +124,7 @@ struct InputView: View {
                 
                 rightOutsideButton
             }
-            .padding(.horizontal, MessageView.horizontalScreenEdgePadding)
+            .padding(.horizontal, MessageView.horizontalStatusPadding)
             .padding(.vertical, 8)
         }
         .background(backgroundColor)
