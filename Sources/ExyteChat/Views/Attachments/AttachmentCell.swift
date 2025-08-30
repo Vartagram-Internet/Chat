@@ -79,7 +79,6 @@ public struct AttachmentCell: View {
                 .foregroundColor(.gray)
                 .frame(width: size.width, height: size.height)
         }
-        AsyncImageView(attachment: attachment, size: size)
     }
 
     
