@@ -96,7 +96,7 @@ struct MessageView: View {
     }
 
     var bottomPadding: CGFloat {
-        if chatType == .conversation { return 0 }
+        if chatType == .conversation { return 2 }
         return positionInUserGroup.isTop ? 8 : 4
     }
 
