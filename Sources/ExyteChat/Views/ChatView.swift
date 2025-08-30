@@ -131,6 +131,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                                                  .media]
     var recorderSettings: RecorderSettings = RecorderSettings()
     var listSwipeActions: ListSwipeActions = ListSwipeActions()
+    var keyboardDismissMode: UIScrollView.KeyboardDismissMode = .none
     
     @StateObject private var viewModel = ChatViewModel()
     @StateObject private var inputViewModel = InputViewModel()
@@ -231,17 +232,18 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                 }
             }
             .fullScreenCover(isPresented: $inputViewModel.showPicker) {
-                AttachmentsEditorNew(
-                        inputViewModel: inputViewModel,
-                        inputViewBuilder: inputViewBuilder,
-                        chatTitle: chatTitle,
-                        messageStyler: messageStyler,
-                        orientationHandler: orientationHandler,
-                        mediaPickerSelectionParameters: mediaPickerSelectionParameters,
-                        availableInputs: availableInputs,
-                        localization: localization
-                    )
-                    .environmentObject(globalFocusState)
+                AttachmentsEditor(
+                    inputViewModel: inputViewModel,
+                    inputViewBuilder: inputViewBuilder,
+                    chatTitle: chatTitle,
+                    messageStyler: messageStyler,
+                    orientationHandler: orientationHandler,
+                    mediaPickerSelectionParameters: mediaPickerSelectionParameters,
+                    availableInputs: availableInputs,
+                    localization: localization
+                )
+                .environmentObject(globalFocusState)
+                .environmentObject(keyboardState)
             }
         
             .onChange(of: inputViewModel.showPicker) { _ , newValue in
@@ -352,7 +354,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
             messageFont: messageFont,
             sections: sections,
             ids: ids,
-            listSwipeActions: listSwipeActions
+            listSwipeActions: listSwipeActions,
+            keyboardDismissMode: keyboardDismissMode
         )
         .applyIf(!isScrollEnabled) {
             $0.frame(height: tableContentHeight)
@@ -604,6 +607,15 @@ public extension ChatView {
     func showMessageMenuOnLongPress(_ show: Bool) -> ChatView {
         var view = self
         view.showMessageMenuOnLongPress = show
+        return view
+    }
+    
+    /// Sets the keyboard dismiss mode for the chat list
+    /// - Parameter mode: The keyboard dismiss mode (.interactive, .onDrag, or .none)
+    /// - Default is .none
+    func keyboardDismissMode(_ mode: UIScrollView.KeyboardDismissMode) -> ChatView {
+        var view = self
+        view.keyboardDismissMode = mode
         return view
     }
     
