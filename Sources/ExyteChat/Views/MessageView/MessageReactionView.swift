@@ -18,7 +18,9 @@ extension MessageView {
                     leadingSpacer: true,
                     needsOverflowBubble: preparedReactions.needsOverflowBubble,
                     text: overflowBubbleText,
-                    containsReactionFromCurrentUser: preparedReactions.overflowContainsCurrentUser
+                    containsReactionFromCurrentUser: preparedReactions.overflowContainsCurrentUser,
+                    message: message,
+                    reactionDelegate: reactionDelegate
                 )
             }
             
@@ -28,7 +30,14 @@ extension MessageView {
                     .zIndex(message.user.isCurrentUser ? Double(preparedReactions.reactions.count - index) : Double(index + 1))
                     .sizeGetter($bubbleSize)
                     .onTapGesture {
-                        // If this is the current user's reaction, remove it by sending the same reaction type
+                        // Always show reaction overview when any reaction is tapped
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("ShowReactionOverview"),
+                            object: nil,
+                            userInfo: ["message": message]
+                        )
+                        
+                        // If this is the current user's reaction, also remove it by sending the same reaction type
                         if reaction.user.isCurrentUser, let reactionDelegate = reactionDelegate {
                             let draftReaction = DraftReaction(messageID: message.id, type: reaction.type)
                             reactionDelegate.didReact(to: message, reaction: draftReaction)
@@ -41,14 +50,16 @@ extension MessageView {
                     leadingSpacer: false,
                     needsOverflowBubble: preparedReactions.needsOverflowBubble,
                     text: overflowBubbleText,
-                    containsReactionFromCurrentUser: preparedReactions.overflowContainsCurrentUser
+                    containsReactionFromCurrentUser: preparedReactions.overflowContainsCurrentUser,
+                    message: message,
+                    reactionDelegate: reactionDelegate
                 )
             }
         }
     }
     
     @ViewBuilder
-    func overflowBubbleView(leadingSpacer:Bool, needsOverflowBubble:Bool, text:String, containsReactionFromCurrentUser:Bool) -> some View {
+    func overflowBubbleView(leadingSpacer:Bool, needsOverflowBubble:Bool, text:String, containsReactionFromCurrentUser:Bool, message: Message, reactionDelegate: ReactionDelegate?) -> some View {
         if needsOverflowBubble {
             ReactionBubble(
                 reaction: .init(
@@ -64,6 +75,14 @@ extension MessageView {
                 font: .footnote.weight(.light)
             )
             .padding(message.user.isCurrentUser ? .trailing : .leading, -3)
+            .onTapGesture {
+                // Show reaction overview when overflow bubble is tapped
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowReactionOverview"),
+                    object: nil,
+                    userInfo: ["message": message]
+                )
+            }
         }
     }
     
@@ -114,7 +133,8 @@ struct ReactionBubble: View {
     var fillColor: Color {
         switch reaction.status {
         case .sending, .sent, .read:
-            return reaction.user.isCurrentUser ? theme.colors.messageMyBG : theme.colors.messageFriendBG
+            // Use the same color for both current user and other users
+            return theme.colors.messageFriendBG
         case .error:
             return .red
         }
@@ -131,10 +151,10 @@ struct ReactionBubble: View {
     
     var body: some View {
         Text(reaction.emoji ?? "?")
-            .font(font)
+            .font(.system(size: 14)) // Slightly larger than before but still compact
             .opacity(opacity)
             .foregroundStyle(theme.colors.messageText(reaction.user.type))
-            .padding(6)
+            .padding(4) // Reduced padding from 6 to 4
             .background(
                 ZStack {
                     Circle()
