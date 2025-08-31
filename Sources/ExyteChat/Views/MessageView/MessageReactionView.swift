@@ -8,7 +8,7 @@ import SwiftUI
 extension MessageView {
     
     @ViewBuilder
-    func reactionsView(_ message: Message, maxReactions: Int = 5) -> some View {
+    func reactionsView(_ message: Message, maxReactions: Int = 5, reactionDelegate: ReactionDelegate?) -> some View {
         let preparedReactions = prepareReactions(message: message, maxReactions: maxReactions)
         let overflowBubbleText = "+\(message.reactions.count - maxReactions + 1)"
         
@@ -27,6 +27,13 @@ extension MessageView {
                     .transition(.scaleAndFade)
                     .zIndex(message.user.isCurrentUser ? Double(preparedReactions.reactions.count - index) : Double(index + 1))
                     .sizeGetter($bubbleSize)
+                    .onTapGesture {
+                        // If this is the current user's reaction, remove it by sending the same reaction type
+                        if reaction.user.isCurrentUser, let reactionDelegate = reactionDelegate {
+                            let draftReaction = DraftReaction(messageID: message.id, type: reaction.type)
+                            reactionDelegate.didReact(to: message, reaction: draftReaction)
+                        }
+                    }
             }
             
             if message.user.isCurrentUser {
@@ -38,10 +45,6 @@ extension MessageView {
                 )
             }
         }
-        .offset(
-            x: message.user.isCurrentUser ? -(bubbleSize.height / 2) : (bubbleSize.height / 2),
-            y: 0
-        )
     }
     
     @ViewBuilder
@@ -136,7 +139,7 @@ struct ReactionBubble: View {
                 ZStack {
                     Circle()
                         .fill(fillColor)
-                    // If the reaction is in flight, animate the stroke
+                    // Only show stroke animation when sending
                     if reaction.status == .sending {
                         Circle()
                             .stroke(style: .init(lineWidth: 2, lineCap: .round, dash: [100, 50], dashPhase: phase))
@@ -146,11 +149,6 @@ struct ReactionBubble: View {
                                     phase -= 150
                                 }
                             }
-                    // Otherwise just stroke the circle normally
-                    } else {
-                        Circle()
-                            .stroke(style: .init(lineWidth: 2))
-                            .fill(theme.colors.mainBG)
                     }
                 }
             )

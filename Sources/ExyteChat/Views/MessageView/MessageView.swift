@@ -25,6 +25,7 @@ struct MessageView: View {
     let isDisplayingMessageMenu: Bool
     let showMessageTimeView: Bool
     let messageLinkPreviewLimit: Int
+    let reactionDelegate: ReactionDelegate?
     var font: UIFont
 
     @State var avatarViewSize: CGSize = .zero
@@ -96,8 +97,11 @@ struct MessageView: View {
     }
 
     var bottomPadding: CGFloat {
-        if chatType == .conversation { return 2 }
-        return positionInUserGroup.isTop ? 8 : 4
+        // Add extra padding if message has reactions to prevent overlap with next message
+        let reactionPadding: CGFloat = (!message.reactions.isEmpty && !isDisplayingMessageMenu) ? 20 : 0
+        
+        if chatType == .conversation { return 2 + reactionPadding }
+        return (positionInUserGroup.isTop ? 8 : 4) + reactionPadding
     }
 
     var body: some View {
@@ -144,41 +148,40 @@ struct MessageView: View {
 
     @ViewBuilder
     func bubbleView(_ message: Message) -> some View {
-        VStack(
-            alignment: message.user.isCurrentUser ? .leading : .trailing,
-            spacing: -bubbleSize.height / 3
-        ) {
+        VStack(alignment: .leading, spacing: 0) {
+
+            if let giphyMediaId = message.giphyMediaId {
+                giphyView(giphyMediaId)
+            }
+
+            if !message.attachments.isEmpty {
+                attachmentsView(message)
+            }
+
+            if !message.text.isEmpty {
+                textWithTimeView(message)
+                    .font(Font(font))
+            }
+
+            if let recording = message.recording {
+                VStack(alignment: .trailing, spacing: 8) {
+                    recordingView(recording)
+                    messageTimeView()
+                        .padding(.bottom, 8)
+                        .padding(.trailing, 12)
+                }
+            }
+        }
+        .bubbleBackground(message, theme: theme)
+        .overlay(alignment: message.user.isCurrentUser ? .bottomTrailing : .bottomLeading) {
             if !isDisplayingMessageMenu && !message.reactions.isEmpty {
-                reactionsView(message)
+                reactionsView(message, reactionDelegate: reactionDelegate)
+                    .offset(
+                        x: message.user.isCurrentUser ? -8 : 8,
+                        y: bubbleSize.height / 2
+                    )
                     .zIndex(1)
             }
-
-            VStack(alignment: .leading, spacing: 0) {
-
-                if let giphyMediaId = message.giphyMediaId {
-                    giphyView(giphyMediaId)
-                }
-
-                if !message.attachments.isEmpty {
-                    attachmentsView(message)
-                }
-
-                if !message.text.isEmpty {
-                    textWithTimeView(message)
-                        .font(Font(font))
-                }
-
-                if let recording = message.recording {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        recordingView(recording)
-                        messageTimeView()
-                            .padding(.bottom, 8)
-                            .padding(.trailing, 12)
-                    }
-                }
-            }
-            .bubbleBackground(message, theme: theme)
-            .zIndex(0)
         }
         .applyIf(isDisplayingMessageMenu) {
             $0.frameGetter($viewModel.messageFrame)
@@ -271,41 +274,78 @@ struct MessageView: View {
 
     @ViewBuilder
     func textWithTimeView(_ message: Message) -> some View {
-        let messageView = MessageTextView(
-            text: message.text, messageStyler: messageStyler,
-            userType: message.user.type, shouldShowLinkPreview: shouldShowLinkPreview,
-            messageLinkPreviewLimit: messageLinkPreviewLimit
-        )
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, MessageView.horizontalTextPadding)
+        let isEmojiOnly = message.text.isEmojiOnly && message.attachments.isEmpty && message.recording == nil
+        
+        let messageView = Group {
+            if isEmojiOnly {
+                // Use a simple Text view for emojis to avoid MessageTextView styling
+                Text(message.text)
+                    .font(.system(size: 48))
+                    .fixedSize()
+            } else {
+                MessageTextView(
+                    text: message.text, messageStyler: messageStyler,
+                    userType: message.user.type, shouldShowLinkPreview: shouldShowLinkPreview,
+                    messageLinkPreviewLimit: messageLinkPreviewLimit
+                )
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, MessageView.horizontalTextPadding)
+            }
+        }
 
         let timeView = messageTimeView()
-            .padding(.horizontal, 12)
+            .padding(.horizontal, isEmojiOnly ? 0 : 12)
 
         Group {
-            switch dateArrangement {
-            case .hstack:
-                HStack(alignment: .lastTextBaseline, spacing: 12) {
-                    messageView
-                    if !message.attachments.isEmpty {
-                        Spacer()
+            if isEmojiOnly {
+                // For emoji-only messages, show them larger and with time below
+                VStack(alignment: message.user.isCurrentUser ? .trailing : .leading, spacing: 2) {
+                    HStack {
+                        if message.user.isCurrentUser {
+                            Spacer()
+                        }
+                        messageView
+                        if !message.user.isCurrentUser {
+                            Spacer()
+                        }
                     }
-                    timeView
-                }
-                .padding(.vertical, 8)
-            case .vstack:
-                VStack(alignment: .trailing, spacing: 4) {
-                    messageView
-                    timeView
-                }
-                .padding(.vertical, 8)
-            case .overlay:
-                messageView
-                    .padding(.vertical, 8)
-                    .overlay(alignment: .bottomTrailing) {
+                    
+                    HStack {
+                        if message.user.isCurrentUser {
+                            Spacer()
+                        }
                         timeView
-                            .padding(.vertical, 8)
+                        if !message.user.isCurrentUser {
+                            Spacer()
+                        }
                     }
+                }
+                .padding(.vertical, 2)
+            } else {
+                switch dateArrangement {
+                case .hstack:
+                    HStack(alignment: .lastTextBaseline, spacing: 12) {
+                        messageView
+                        if !message.attachments.isEmpty {
+                            Spacer()
+                        }
+                        timeView
+                    }
+                    .padding(.vertical, 8)
+                case .vstack:
+                    VStack(alignment: .trailing, spacing: 4) {
+                        messageView
+                        timeView
+                    }
+                    .padding(.vertical, 8)
+                case .overlay:
+                    messageView
+                        .padding(.vertical, 8)
+                        .overlay(alignment: .bottomTrailing) {
+                            timeView
+                                .padding(.vertical, 8)
+                        }
+                }
             }
         }
     }
@@ -346,20 +386,71 @@ extension View {
     {
         let radius: CGFloat = !message.attachments.isEmpty ? 12 : 20
         let additionalMediaInset: CGFloat = message.attachments.count > 1 ? 2 : 0
+        let isEmojiOnly = message.text.isEmojiOnly && message.attachments.isEmpty && message.recording == nil
+        
         self
             .frame(
-                width: message.attachments.isEmpty
-                    ? nil : MessageView.widthWithMedia + additionalMediaInset
+                width: (message.attachments.isEmpty && !isEmojiOnly)
+                    ? nil : (isEmojiOnly ? nil : MessageView.widthWithMedia + additionalMediaInset)
             )
             .foregroundColor(theme.colors.messageText(message.user.type))
             .background {
-                if isReply || !message.text.isEmpty || message.recording != nil {
+                if !isEmojiOnly && (isReply || !message.text.isEmpty || message.recording != nil) {
                     RoundedRectangle(cornerRadius: radius)
                         .foregroundColor(theme.colors.messageBG(message.user.type))
                         .opacity(isReply ? theme.style.replyOpacity : 1)
                 }
             }
             .cornerRadius(radius)
+    }
+}
+
+extension String {
+    var isEmojiOnly: Bool {
+        guard !isEmpty else { return false }
+        
+        // Remove all whitespace and check if what remains are only emojis
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        
+        // Check if all characters are emojis
+        for char in trimmed {
+            if !char.isEmoji {
+                return false
+            }
+        }
+        return true
+    }
+}
+
+extension Character {
+    var isEmoji: Bool {
+        // Check if the character is an emoji using more precise Unicode scalar properties
+        guard let scalar = unicodeScalars.first else { return false }
+        
+        // Use the built-in emoji property which is more accurate
+        if scalar.properties.isEmoji {
+            // Exclude digits, letters, and basic punctuation that might have emoji presentation
+            if scalar.properties.isEmojiPresentation || 
+               (!scalar.isASCII && !scalar.properties.isAlphabetic && !scalar.properties.isWhitespace) {
+                
+                // Additional check to exclude numbers and basic ASCII characters
+                let value = scalar.value
+                
+                // Exclude ASCII digits (0-9)
+                if (0x0030...0x0039).contains(value) { return false }
+                
+                // Exclude basic ASCII letters and punctuation
+                if (0x0020...0x007F).contains(value) { return false }
+                
+                // Exclude combining marks that aren't actually emojis
+                if scalar.properties.generalCategory == .nonspacingMark { return false }
+                
+                return true
+            }
+        }
+        
+        return false
     }
 }
 

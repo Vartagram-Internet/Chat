@@ -35,6 +35,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
     let avatarSize: CGFloat
     let showMessageMenuOnLongPress: Bool
     let tapAvatarClosure: ChatView.TapAvatarClosure?
+    let reactionDelegate: ReactionDelegate?
     let paginationHandler: PaginationHandler?
     let messageStyler: (String) -> AttributedString
     let shouldShowLinkPreview: (URL) -> Bool
@@ -65,6 +66,11 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
         tableView.scrollsToTop = false
         tableView.isScrollEnabled = isScrollEnabled
         tableView.keyboardDismissMode = keyboardDismissMode
+
+        // Add a very sensitive pan gesture for WhatsApp-style quick reply
+        let quickReplyGesture = UIPanGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleQuickReplyGesture(_:)))
+        quickReplyGesture.delegate = context.coordinator
+        tableView.addGestureRecognizer(quickReplyGesture)
 
         NotificationCenter.default.addObserver(forName: .onScrollToBottom, object: nil, queue: nil) { _ in
             DispatchQueue.main.async {
@@ -367,17 +373,17 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             isScrolledToBottom: $isScrolledToBottom, isScrolledToTop: $isScrolledToTop,
             messageBuilder: messageBuilder, mainHeaderBuilder: mainHeaderBuilder,
             headerBuilder: headerBuilder, type: type, showDateHeaders: showDateHeaders,
-            avatarSize: avatarSize, showMessageMenuOnLongPress: showMessageMenuOnLongPress,
+            isScrollEnabled: isScrollEnabled, avatarSize: avatarSize, showMessageMenuOnLongPress: showMessageMenuOnLongPress,
             tapAvatarClosure: tapAvatarClosure, paginationHandler: paginationHandler,
             messageStyler: messageStyler, shouldShowLinkPreview: shouldShowLinkPreview,
             showMessageTimeView: showMessageTimeView,
             messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont,
             sections: sections, ids: ids, mainBackgroundColor: theme.colors.mainBG,
             listSwipeActions: listSwipeActions,
-            keyboardDismissMode: keyboardDismissMode)
+            keyboardDismissMode: keyboardDismissMode, reactionDelegate: reactionDelegate)
     }
 
-    class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate {
+    class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate, UIGestureRecognizerDelegate {
 
         @ObservedObject var viewModel: ChatViewModel
         @ObservedObject var inputViewModel: InputViewModel
@@ -391,6 +397,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
 
         let type: ChatType
         let showDateHeaders: Bool
+        let isScrollEnabled: Bool
         let avatarSize: CGFloat
         let showMessageMenuOnLongPress: Bool
         let tapAvatarClosure: ChatView.TapAvatarClosure?
@@ -400,6 +407,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
         let showMessageTimeView: Bool
         let messageLinkPreviewLimit: Int
         let messageFont: UIFont
+        let reactionDelegate: ReactionDelegate?
         var sections: [MessagesSection] {
             didSet {
                 if let lastSection = sections.last {
@@ -419,13 +427,14 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             isScrolledToBottom: Binding<Bool>, isScrolledToTop: Binding<Bool>,
             messageBuilder: MessageBuilderClosure?, mainHeaderBuilder: (() -> AnyView)?,
             headerBuilder: ((Date) -> AnyView)?, type: ChatType, showDateHeaders: Bool,
-            avatarSize: CGFloat, showMessageMenuOnLongPress: Bool,
+            isScrollEnabled: Bool, avatarSize: CGFloat, showMessageMenuOnLongPress: Bool,
             tapAvatarClosure: ChatView.TapAvatarClosure?, paginationHandler: PaginationHandler?,
             messageStyler: @escaping (String) -> AttributedString,
             shouldShowLinkPreview: @escaping (URL) -> Bool, showMessageTimeView: Bool,
             messageLinkPreviewLimit: Int, messageFont: UIFont, sections: [MessagesSection],
             ids: [String], mainBackgroundColor: Color, paginationTargetIndexPath: IndexPath? = nil,
-            listSwipeActions: ListSwipeActions, keyboardDismissMode: UIScrollView.KeyboardDismissMode
+            listSwipeActions: ListSwipeActions, keyboardDismissMode: UIScrollView.KeyboardDismissMode,
+            reactionDelegate: ReactionDelegate?
         ) {
             self.viewModel = viewModel
             self.inputViewModel = inputViewModel
@@ -436,6 +445,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             self.headerBuilder = headerBuilder
             self.type = type
             self.showDateHeaders = showDateHeaders
+            self.isScrollEnabled = isScrollEnabled
             self.avatarSize = avatarSize
             self.showMessageMenuOnLongPress = showMessageMenuOnLongPress
             self.tapAvatarClosure = tapAvatarClosure
@@ -451,6 +461,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             self.paginationTargetIndexPath = paginationTargetIndexPath
             self.listSwipeActions = listSwipeActions
             self.keyboardDismissMode = keyboardDismissMode
+            self.reactionDelegate = reactionDelegate
         }
 
         /// call pagination handler when this row is reached
@@ -507,12 +518,8 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
         }
         
         func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-            guard let items = type == .conversation ? listSwipeActions.trailing : listSwipeActions.leading else { return nil }
-            guard !items.actions.isEmpty else { return nil }
-            let message = sections[indexPath.section].rows[indexPath.row].message
-            let conf = UISwipeActionsConfiguration(actions: items.actions.filter({ $0.activeFor(message) }).map { toContextualAction($0, message: message) })
-            conf.performsFirstActionWithFullSwipe = items.performsFirstActionWithFullSwipe
-            return conf
+            // Disable built-in swipe actions - we'll handle this with our custom gesture
+            return nil
         }
         
         func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
@@ -521,6 +528,8 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             let message = sections[indexPath.section].rows[indexPath.row].message
             let conf = UISwipeActionsConfiguration(actions: items.actions.filter({ $0.activeFor(message) }).map { toContextualAction($0, message: message) })
             conf.performsFirstActionWithFullSwipe = items.performsFirstActionWithFullSwipe
+            
+            // Make the swipe actions less sensitive so our custom gesture can take priority
             return conf
         }
         
@@ -578,7 +587,8 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
                     messageStyler: messageStyler, shouldShowLinkPreview: shouldShowLinkPreview,
                     isDisplayingMessageMenu: false, showMessageTimeView: showMessageTimeView,
                     messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont,
-                    isLastItem:indexPath.row == 0 && indexPath.section == 0
+                    isLastItem:indexPath.row == 0 && indexPath.section == 0,
+                    reactionDelegate: reactionDelegate
                 )
                 .transition(.scale)
                 .background(MessageMenuPreferenceViewSetter(id: row.id))
@@ -615,6 +625,70 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             isScrolledToBottom = scrollView.contentOffset.y <= 0
             isScrolledToTop = scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.frame.height - 1
+        }
+        
+        // MARK: - Quick Reply Gesture (WhatsApp-style)
+        
+        @objc func handleQuickReplyGesture(_ gesture: UIPanGestureRecognizer) {
+            guard let tableView = gesture.view as? UITableView else { return }
+            
+            let location = gesture.location(in: tableView)
+            guard let indexPath = tableView.indexPathForRow(at: location) else { return }
+            
+            let translation = gesture.translation(in: tableView)
+            let velocity = gesture.velocity(in: tableView)
+            
+            // Only handle right swipes
+            guard translation.x > 0 else { return }
+            
+            // Get the message
+            let message = sections[indexPath.section].rows[indexPath.row].message
+            
+            // Get the reply action
+            guard let leadingActions = type == .conversation ? listSwipeActions.trailing : listSwipeActions.leading,
+                  !leadingActions.actions.isEmpty,
+                  let replyAction = leadingActions.actions.first(where: { $0.activeFor(message) }) else {
+                return
+            }
+            
+            // Very small threshold - just 30 points
+            let threshold: CGFloat = 30
+            
+            switch gesture.state {
+            case .changed:
+                if translation.x > threshold {
+                    print("🎯 Quick reply triggered at \(translation.x) points!")
+                    
+                    // Trigger reply immediately
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    
+                    replyAction.action(message, viewModel.messageMenuAction())
+                    
+                    // Disable gesture to prevent multiple triggers
+                    gesture.isEnabled = false
+                    DispatchQueue.main.async {
+                        gesture.isEnabled = true
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        // MARK: - UIGestureRecognizerDelegate
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
+        }
+        
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let panGesture = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+            
+            let velocity = panGesture.velocity(in: gestureRecognizer.view)
+            
+            // Only allow horizontal right swipes
+            return velocity.x > 0 && abs(velocity.x) > abs(velocity.y)
         }
     }
 

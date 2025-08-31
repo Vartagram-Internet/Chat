@@ -510,11 +510,15 @@ struct MessageMenu<MainButton: View, ActionEnum: MessageMenuAction>: View {
         HStack {
             if alignment == .right { Spacer() }
             
-            VStack {
+            // Single floating container with all menu items
+            VStack(spacing: 1) {
                 ForEach(buttons) { button in
-                    menuButton(title: button.action.title(), icon: button.action.icon(), action: button.action)
+                    menuButton(title: button.action.title(), icon: button.action.icon(), action: button.action, isFirst: button.id == 0, isLast: button.id == buttons.count - 1)
                 }
             }
+            .background(theme.colors.messageFriendBG)
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             .menuContainer(menuStyle)
             
             if alignment == .left { Spacer() }
@@ -526,25 +530,36 @@ struct MessageMenu<MainButton: View, ActionEnum: MessageMenuAction>: View {
     }
     
     @ViewBuilder
-    func menuButton(title: String, icon: Image, action: ActionEnum) -> some View {
+    func menuButton(title: String, icon: Image, action: ActionEnum, isFirst: Bool, isLast: Bool) -> some View {
+        let isDeleteAction = title.lowercased() == "delete"
+        let textColor = isDeleteAction ? theme.colors.menuTextDelete : theme.colors.menuText
+        
         HStack(spacing: 0) {
-            ZStack {
-                theme.colors.messageFriendBG
-                    .cornerRadius(12)
+            VStack(spacing: 0) {
                 HStack {
-                    Text(title)
-                        .foregroundColor(theme.colors.menuText)
-                    Spacer()
                     icon
                         .renderingMode(.template)
-                        .foregroundStyle(theme.colors.menuText)
+                        .foregroundStyle(textColor)
+                        .frame(width: 20)
+                    
+                    Text(title)
+                        .foregroundColor(textColor)
+                        .font(getFont)
+                    
+                    Spacer()
                 }
-                .font(getFont)
-                .padding(.vertical, 11)
-                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(Color.clear)
+                
+                // Add separator line except for the last item
+                if !isLast {
+                    Divider()
+                        .background(theme.colors.menuText.opacity(0.2))
+                }
             }
-            .frame(width: 208)
-            .fixedSize()
+            .frame(width: 180)
+            .contentShape(Rectangle())
             .onTapGesture {
                 onAction(action)
                 dismissSelf()

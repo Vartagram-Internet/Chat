@@ -346,6 +346,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
             avatarSize: avatarSize,
             showMessageMenuOnLongPress: showMessageMenuOnLongPress,
             tapAvatarClosure: tapAvatarClosure,
+            reactionDelegate: reactionDelegate,
             paginationHandler: paginationHandler,
             messageStyler: messageStyler,
             shouldShowLinkPreview: shouldShowLinkPreview,
@@ -449,7 +450,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                 avatarSize: avatarSize, tapAvatarClosure: nil, messageStyler: messageStyler,
                 shouldShowLinkPreview: shouldShowLinkPreview,
                 isDisplayingMessageMenu: true, showMessageTimeView: showMessageTimeView,
-                messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont, isLastItem: false
+                messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont, isLastItem: false,
+                reactionDelegate: reactionDelegate
             )
             .onTapGesture {
                 hideMessageMenu()

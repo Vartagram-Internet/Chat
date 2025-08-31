@@ -26,6 +26,7 @@ struct ChatMessageView<MessageContent: View>: View {
     let messageLinkPreviewLimit: Int
     let messageFont: UIFont
     let isLastItem: Bool
+    let reactionDelegate: ReactionDelegate?
     var body: some View {
         Group {
             if let messageBuilder = messageBuilder {
@@ -53,6 +54,7 @@ struct ChatMessageView<MessageContent: View>: View {
                     isDisplayingMessageMenu: isDisplayingMessageMenu,
                     showMessageTimeView: showMessageTimeView,
                     messageLinkPreviewLimit: messageLinkPreviewLimit,
+                    reactionDelegate: reactionDelegate,
                     font: messageFont)
             }
         }
