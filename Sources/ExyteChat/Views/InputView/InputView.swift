@@ -106,7 +106,7 @@ struct InputView: View {
     @State private var dragStart: Date?
     @State private var tapDelayTimer: Timer?
     @State private var cancelGesture = false
-    private let tapDelay = 0.0
+    private let tapDelay = 0.2
     
     var body: some View {
         VStack {
@@ -166,15 +166,10 @@ struct InputView: View {
     var middleView: some View {
         Group {
             switch state {
-            case .hasRecording, .pausedRecording:
-                recordDuration
-                
-            case .playingRecording:
-                recordDurationLeft
-       
+            case .hasRecording, .playingRecording, .pausedRecording:
+                recordWaveform
             case .isRecordingHold:
-                recordDurationInProcess
-                
+                swipeToCancel
             case .isRecordingTap:
                 recordingInProgress
             default:
@@ -201,13 +196,11 @@ struct InputView: View {
                     cameraButton
                 }
             case .isRecordingHold, .isRecordingTap:
-                stopRecordButton
+                recordDurationInProcess
             case .hasRecording:
-               // recordDuration
-                recordWaveform
+                recordDuration
             case .playingRecording, .pausedRecording:
-                //recordDurationLeft
-                recordWaveform
+                recordDurationLeft
             default:
                 Color.clear.frame(width: 8, height: 1)
             }
@@ -263,7 +256,18 @@ struct InputView: View {
                     }
                 }
                 .compositingGroup()
-               
+                .overlay(alignment: .top) {
+                    Group {
+                        if state == .isRecordingTap {
+                            stopRecordButton
+                        } else if state == .isRecordingHold {
+                            lockRecordButton
+                        }
+                    }
+                    .sizeGetter($overlaySize)
+                    // hardcode 28 for now because sizeGetter returns 0 somehow
+                    .offset(y: (state == .isRecordingTap ? -28 : -overlaySize.height) - 24)
+                }
             }
             .viewSize(48)
         }
@@ -403,17 +407,13 @@ struct InputView: View {
         Button {
             onAction(.stopRecordAudio)
         } label: {
-            VStack{
-                theme.images.recordAudio.stopRecord
-                    .viewSize(28)
-                    .background(
-                        Capsule()
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.4), radius: 1)
-                    )
-            }.padding(.horizontal, 16)
-            
-
+            theme.images.recordAudio.stopRecord
+                .viewSize(28)
+                .background(
+                    Capsule()
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.4), radius: 1)
+                )
         }
     }
     
@@ -467,46 +467,37 @@ struct InputView: View {
     
     var recordDurationInProcess: some View {
         HStack {
-            Spacer()
             Circle()
                 .foregroundColor(theme.colors.recordDot)
                 .viewSize(6)
             recordDuration
-            Spacer()
         }
     }
-  
+    
     var recordDuration: some View {
-        HStack{
-            Spacer()
-            Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
-                .foregroundColor(theme.colors.mainCaptionText)
-                .opacity(0.75)
-                .font(.footnote)
-                .monospacedDigit()
-                .padding(.trailing, 12)
-            Spacer()
-        }
-      
+        Text(DateFormatter.timeString(Int(viewModel.attachments.recording?.duration ?? 0)))
+            .foregroundColor(theme.colors.mainText)
+            .opacity(0.6)
+            .font(.caption2)
+            .monospacedDigit()
+            .padding(.trailing, 12)
     }
     
     var recordDurationLeft: some View {
-        HStack{
-            Spacer()
         Text(DateFormatter.timeString(Int(recordingPlayer.secondsLeft)))
-            .foregroundColor(theme.colors.mainCaptionText)
-            .opacity(0.75)
-            .font(.footnote)
+            .foregroundColor(theme.colors.mainText)
+            .opacity(0.6)
+            .font(.caption2)
             .monospacedDigit()
             .padding(.trailing, 12)
-            Spacer()
-        }
     }
     
     var playRecordButton: some View {
-        Button(action:{}){
-                             theme.images.recordAudio.playRecord
-             }
+        Button {
+            onAction(.playRecord)
+        } label: {
+            theme.images.recordAudio.playRecord
+        }
     }
     
     var pauseRecordButton: some View {
@@ -529,7 +520,12 @@ struct InputView: View {
                     }
                 }
                 .frame(width: 20)
- 
+                
+                RecordWaveformPlaying(samples: samples, progress: recordingPlayer.progress, color: theme.colors.mainText, addExtraDots: true) { progress in
+                    Task {
+                        await recordingPlayer.seek(with: viewModel.attachments.recording!, to: progress)
+                    }
+                }
             }
             .padding(.horizontal, 8)
         }

@@ -12,11 +12,6 @@ struct RecordWaveformWithButtons: View {
     @Environment(\.chatTheme) private var theme
 
     @StateObject var recordPlayer = RecordingPlayer()
-    
-    @State private var localFileURL: URL?
-    @State private var isDownloading: Bool = false
-    @State private var loadedDuration: Double? = nil
-
 
     // 160 is screen left-padding/right-padding and playButton's width.
     // ensure that the view does not exceed the screen, need to subtract
@@ -30,10 +25,8 @@ struct RecordWaveformWithButtons: View {
     var colorWaveform: Color
 
     var duration: Int {
-        let value = recordPlayer.secondsLeft != 0 ? recordPlayer.secondsLeft : (loadedDuration ?? recording.duration)
-        return max(Int(value - 0.5), 0)
+        max(Int((recordPlayer.secondsLeft != 0 ? recordPlayer.secondsLeft : recording.duration) - 0.5), 0)
     }
-
 
     var body: some View {
         HStack(spacing: 12) {
@@ -50,12 +43,10 @@ struct RecordWaveformWithButtons: View {
             .viewSize(40)
             .circleBackground(colorButtonBg)
             .onTapGesture {
-                guard let localURL = localFileURL else { return }
                 Task {
-                    await recordPlayer.togglePlay(Recording(duration: loadedDuration ?? 0.0, waveformSamples: recording.waveformSamples, url: localURL))
+                    await recordPlayer.togglePlay(recording)
                 }
             }
-
             
             VStack(alignment: .leading, spacing: 5) {
                 RecordWaveformPlaying(samples: recording.waveformSamples, progress: recordPlayer.progress, color: colorWaveform, addExtraDots: false) { progress in
@@ -63,49 +54,18 @@ struct RecordWaveformWithButtons: View {
                         await recordPlayer.seek(with: recording, to: progress)
                     }
                 }
-                Text(duration == 0 ? "0.5 sec" : DateFormatter.timeString(duration))
+                Text(DateFormatter.timeString(duration))
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundColor(colorWaveform)
             }
-        }.onAppear {
-            Task {
-                guard localFileURL == nil, let remoteURL = recording.url else { return }
-
-                isDownloading = true
-                do {
-                    let fileURL = try await downloadToLocalCache(from: remoteURL)
-                    localFileURL = fileURL
-                    loadedDuration = try await RecordingPlayer.getDuration(of: fileURL)
-                } catch {
-                    print("Failed to download or get duration:", error)
-                }
-                isDownloading = false
-            }
         }
-
         .onDisappear {
             Task {
                 await recordPlayer.pause()
             }
         }
     }
-    
-    func downloadToLocalCache(from url: URL) async throws -> URL {
-        let (tempFileURL, _) = try await URLSession.shared.download(from: url)
-
-        let filename = url.lastPathComponent
-        let targetURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-
-        if FileManager.default.fileExists(atPath: targetURL.path) {
-            try FileManager.default.removeItem(at: targetURL)
-        }
-        try FileManager.default.moveItem(at: tempFileURL, to: targetURL)
-
-        return targetURL
-    }
-
-
 }
 
 struct RecordWaveformPlaying: View {
