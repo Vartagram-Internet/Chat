@@ -26,6 +26,7 @@ struct MessageView: View {
     let showMessageTimeView: Bool
     let messageLinkPreviewLimit: Int
     let reactionDelegate: ReactionDelegate?
+    let isGhostMode: Bool
     var font: UIFont
 
     @State var avatarViewSize: CGSize = .zero
@@ -93,15 +94,15 @@ struct MessageView: View {
 
     var topPadding: CGFloat {
         if chatType == .comments { return 0 }
-        return positionInUserGroup.isTop && !positionInMessagesSection.isTop ? 8 : 4
+        return positionInUserGroup.isTop && !positionInMessagesSection.isTop ? 12 : 6
     }
 
     var bottomPadding: CGFloat {
         // Add extra padding if message has reactions to prevent overlap with next message
-        let reactionPadding: CGFloat = (!message.reactions.isEmpty && !isDisplayingMessageMenu) ? 20 : 0
+        let reactionPadding: CGFloat = (!message.reactions.isEmpty && !isDisplayingMessageMenu) ? 30 : 0
         
-        if chatType == .conversation { return 2 + reactionPadding }
-        return (positionInUserGroup.isTop ? 8 : 4) + reactionPadding
+        if chatType == .conversation { return 3 + reactionPadding }
+        return (positionInUserGroup.isTop ? 12 : 6) + reactionPadding
     }
 
     var body: some View {
@@ -172,7 +173,7 @@ struct MessageView: View {
                 }
             }
         }
-        .bubbleBackground(message, theme: theme)
+        .bubbleBackground(message, theme: theme, isGhostMode: isGhostMode)
         .overlay(alignment: message.user.isCurrentUser ? .bottomTrailing : .bottomLeading) {
             if !isDisplayingMessageMenu && !message.reactions.isEmpty {
                 reactionsView(message, reactionDelegate: reactionDelegate)
@@ -217,7 +218,7 @@ struct MessageView: View {
         .font(.caption2)
         .padding(.vertical, 8)
             .frame(width: message.attachments.isEmpty ? nil : MessageView.widthWithMedia + additionalMediaInset)
-        .bubbleBackground(message, theme: theme, isReply: true)
+        .bubbleBackground(message, theme: theme, isReply: true, isGhostMode: isGhostMode)
     }
 
     @ViewBuilder
@@ -382,7 +383,7 @@ struct MessageView: View {
 extension View {
 
     @ViewBuilder
-    func bubbleBackground(_ message: Message, theme: ChatTheme, isReply: Bool = false) -> some View
+    func bubbleBackground(_ message: Message, theme: ChatTheme, isReply: Bool = false, isGhostMode: Bool = false) -> some View
     {
         let radius: CGFloat = !message.attachments.isEmpty ? 12 : 20
         let additionalMediaInset: CGFloat = message.attachments.count > 1 ? 2 : 0
@@ -396,9 +397,27 @@ extension View {
             .foregroundColor(theme.colors.messageText(message.user.type))
             .background {
                 if !isEmojiOnly && (isReply || !message.text.isEmpty || message.recording != nil) {
-                    RoundedRectangle(cornerRadius: radius)
-                        .foregroundColor(theme.colors.messageBG(message.user.type))
-                        .opacity(isReply ? theme.style.replyOpacity : 1)
+                    if isGhostMode {
+                        // Ghost mode: dashed border instead of solid background
+                        RoundedRectangle(cornerRadius: radius)
+                            .fill(Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: radius)
+                                    .strokeBorder(
+                                        style: StrokeStyle(
+                                            lineWidth: 1.2,
+                                            lineCap: .round,
+                                            dash: [4.5, 3]
+                                        )
+                                    )
+                                    .foregroundColor(Color.gray)
+                            )
+                    } else {
+                        // Normal mode: solid background
+                        RoundedRectangle(cornerRadius: radius)
+                            .foregroundColor(theme.colors.messageBG(message.user.type))
+                            .opacity(isReply ? theme.style.replyOpacity : 1)
+                    }
                 }
             }
             .cornerRadius(radius)

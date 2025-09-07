@@ -356,7 +356,8 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
             sections: sections,
             ids: ids,
             listSwipeActions: listSwipeActions,
-            keyboardDismissMode: keyboardDismissMode
+            keyboardDismissMode: keyboardDismissMode,
+            isGhostMode: isGhostMode
         )
         .applyIf(!isScrollEnabled) {
             $0.frame(height: tableContentHeight)
@@ -451,7 +452,7 @@ public struct ChatView<MessageContent: View, InputViewContent: View, MenuAction:
                 shouldShowLinkPreview: shouldShowLinkPreview,
                 isDisplayingMessageMenu: true, showMessageTimeView: showMessageTimeView,
                 messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont, isLastItem: false,
-                reactionDelegate: reactionDelegate
+                reactionDelegate: reactionDelegate, isGhostMode: isGhostMode
             )
             .onTapGesture {
                 hideMessageMenu()

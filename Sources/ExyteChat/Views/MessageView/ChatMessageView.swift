@@ -27,6 +27,7 @@ struct ChatMessageView<MessageContent: View>: View {
     let messageFont: UIFont
     let isLastItem: Bool
     let reactionDelegate: ReactionDelegate?
+    let isGhostMode: Bool
     var body: some View {
         Group {
             if let messageBuilder = messageBuilder {
@@ -55,7 +56,7 @@ struct ChatMessageView<MessageContent: View>: View {
                     showMessageTimeView: showMessageTimeView,
                     messageLinkPreviewLimit: messageLinkPreviewLimit,
                     reactionDelegate: reactionDelegate,
-                    font: messageFont)
+                    isGhostMode: isGhostMode, font: messageFont)
             }
         }
         .id(row.message.id)

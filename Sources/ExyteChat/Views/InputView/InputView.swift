@@ -118,8 +118,26 @@ struct InputView: View {
                     rightView
                 }
                 .background {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(style == .message ? theme.colors.inputBG : theme.colors.inputSignatureBG)
+                    if isGhostMode {
+                        // Ghost mode: dotted border style like Instagram vanish mode
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(style == .message ? theme.colors.inputBG : theme.colors.inputSignatureBG)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .strokeBorder(
+                                        style: StrokeStyle(
+                                            lineWidth: 1.5,
+                                            lineCap: .round,
+                                            dash: [6, 4]
+                                        )
+                                    )
+                                    .foregroundColor(Color.gray)
+                            )
+                    } else {
+                        // Normal mode: solid background
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(style == .message ? theme.colors.inputBG : theme.colors.inputSignatureBG)
+                    }
                 }
                 
                 rightOutsideButton

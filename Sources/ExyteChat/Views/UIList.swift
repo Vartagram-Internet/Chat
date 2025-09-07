@@ -46,6 +46,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
     let ids: [String]
     let listSwipeActions: ListSwipeActions
     let keyboardDismissMode: UIScrollView.KeyboardDismissMode
+    let isGhostMode: Bool
 
     @State var isScrolledToTop = false
     @State var updateQueue = UpdateQueue()
@@ -380,7 +381,8 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont,
             sections: sections, ids: ids, mainBackgroundColor: theme.colors.mainBG,
             listSwipeActions: listSwipeActions,
-            keyboardDismissMode: keyboardDismissMode, reactionDelegate: reactionDelegate)
+            keyboardDismissMode: keyboardDismissMode, reactionDelegate: reactionDelegate,
+            isGhostMode: isGhostMode)
     }
 
     class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate, UIGestureRecognizerDelegate {
@@ -408,6 +410,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
         let messageLinkPreviewLimit: Int
         let messageFont: UIFont
         let reactionDelegate: ReactionDelegate?
+        let isGhostMode: Bool
         var sections: [MessagesSection] {
             didSet {
                 if let lastSection = sections.last {
@@ -434,7 +437,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             messageLinkPreviewLimit: Int, messageFont: UIFont, sections: [MessagesSection],
             ids: [String], mainBackgroundColor: Color, paginationTargetIndexPath: IndexPath? = nil,
             listSwipeActions: ListSwipeActions, keyboardDismissMode: UIScrollView.KeyboardDismissMode,
-            reactionDelegate: ReactionDelegate?
+            reactionDelegate: ReactionDelegate?, isGhostMode: Bool
         ) {
             self.viewModel = viewModel
             self.inputViewModel = inputViewModel
@@ -462,6 +465,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
             self.listSwipeActions = listSwipeActions
             self.keyboardDismissMode = keyboardDismissMode
             self.reactionDelegate = reactionDelegate
+            self.isGhostMode = isGhostMode
         }
 
         /// call pagination handler when this row is reached
@@ -588,7 +592,7 @@ struct UIList<MessageContent: View, InputView: View>: UIViewRepresentable {
                     isDisplayingMessageMenu: false, showMessageTimeView: showMessageTimeView,
                     messageLinkPreviewLimit: messageLinkPreviewLimit, messageFont: messageFont,
                     isLastItem:indexPath.row == 0 && indexPath.section == 0,
-                    reactionDelegate: reactionDelegate
+                    reactionDelegate: reactionDelegate, isGhostMode: isGhostMode
                 )
                 .transition(.scale)
                 .background(MessageMenuPreferenceViewSetter(id: row.id))
