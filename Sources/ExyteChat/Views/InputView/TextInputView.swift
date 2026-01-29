@@ -12,7 +12,7 @@ struct TextInputView: View {
     @EnvironmentObject private var globalFocusState: GlobalFocusState
     
     @Binding var text: String
-    @State var inputFieldId: UUID
+    var inputFieldId: UUID
     var style: InputViewStyle
     var availableInputs: [AvailableInputType]
     var localization: ChatLocalization
